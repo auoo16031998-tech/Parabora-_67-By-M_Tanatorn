@@ -1,0 +1,2048 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parabola 3D Lab — สื่อการสอนพาราโบลา & ลิมิตสู่อินฟินิตี้ (ม.4)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script>
+window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }, options: { enableMenu: false } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root {
+  --bg: #060a18;
+  --bg2: #0d1431;
+  --glass: rgba(255, 255, 255, 0.065);
+  --glass-strong: rgba(14, 20, 46, 0.72);
+  --stroke: rgba(255, 255, 255, 0.13);
+  --text: #e8eeff;
+  --muted: #93a0c8;
+  --cyan: #38bdf8;
+  --violet: #a78bfa;
+  --orange: #fb923c;
+  --rose: #fb7185;
+  --amber: #fbbf24;
+  --emerald: #34d399;
+  --radius: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: 'Prompt', 'Sarabun', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+.mono { font-family: 'JetBrains Mono', monospace; }
+button { font-family: inherit; cursor: pointer; border: none; color: inherit; background: none; }
+input { font-family: inherit; }
+.hidden { display: none !important; }
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 450px;
+  height: 100vh;
+  height: 100dvh;
+  background:
+    radial-gradient(1200px 700px at 15% 0%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(900px 600px at 100% 100%, rgba(167, 139, 250, 0.12), transparent 60%),
+    var(--bg);
+}
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 600px at 50% 40%, rgba(30, 58, 138, 0.30), transparent 70%),
+    linear-gradient(180deg, #070c1f 0%, #0a1230 55%, #0b1026 100%);
+}
+#threeHost { position: absolute; inset: 0; touch-action: none; }
+#threeHost canvas { display: block; width: 100% !important; height: 100% !important; outline: none; }
+.stage.is2d #threeHost { cursor: crosshair; }
+
+.brand {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 16px;
+  max-width: calc(100% - 28px);
+}
+.brand .logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #38bdf8, #6366f1 55%, #fb923c);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+}
+.brand h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.4px; line-height: 1.2; }
+.brand h1 span {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border-radius: 999px;
+  color: var(--cyan);
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  vertical-align: middle;
+}
+.brand p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.toolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 7px;
+  border-radius: 16px;
+  max-width: calc(100% - 330px);
+}
+.seg { display: flex; background: rgba(255, 255, 255, 0.06); border-radius: 11px; padding: 3px; gap: 2px; }
+.seg button { padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 8px; color: var(--muted); transition: all 0.25s; }
+.seg button.on { color: #04101f; background: linear-gradient(135deg, #7dd3fc, #38bdf8); box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4); }
+.tbtn {
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+.tbtn:hover { background: rgba(255, 255, 255, 0.13); }
+.tbtn.on { background: rgba(56, 189, 248, 0.18); border-color: rgba(56, 189, 248, 0.55); color: #bae6fd; }
+
+.notes {
+  position: absolute;
+  top: 82px;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100% - 28px));
+}
+.note {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #e9d5ff;
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(124, 58, 237, 0.18);
+  animation: pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.note b { color: #fff; }
+.note.warn { color: #fed7aa; border-color: rgba(251, 146, 60, 0.55); background: rgba(234, 88, 12, 0.16); }
+
+.hint {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 4;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+.coord {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 4;
+  font-size: 11px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  color: #bae6fd;
+  pointer-events: none;
+}
+.coord b { color: var(--amber); font-weight: 600; }
+
+#hotLayer { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.hs {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  pointer-events: auto;
+  margin: -13px 0 0 -13px;
+  will-change: transform;
+}
+.hs .dot {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0a0f24;
+  background: var(--c);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18), 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s;
+}
+.hs .dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  animation: ring 2.2s ease-out infinite;
+}
+.hs .lbl {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(8, 12, 30, 0.78);
+  border: 1px solid var(--stroke);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: all 0.25s;
+}
+.hs:hover .dot, .hs.active .dot { transform: scale(1.18); }
+.hs:hover .lbl, .hs.active .lbl { opacity: 1; transform: none; }
+
+.info {
+  position: absolute;
+  left: 14px;
+  bottom: 52px;
+  z-index: 7;
+  width: min(360px, calc(100% - 28px));
+  padding: 16px 18px 16px;
+  border-radius: 20px;
+  background: var(--glass-strong);
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.info.show { opacity: 1; transform: none; pointer-events: auto; }
+.info::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--ic, var(--cyan));
+  box-shadow: 0 0 18px var(--ic, var(--cyan));
+}
+.info .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.info .tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--ic, var(--cyan));
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--ic, var(--cyan));
+}
+.info .x {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  line-height: 1;
+}
+.info .x:hover { background: rgba(255, 255, 255, 0.2); }
+.info .body { animation: swap 0.45s ease; }
+.info h3 { font-size: 15px; font-weight: 600; margin: 10px 0 8px; }
+.info .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--ic, var(--cyan));
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  word-break: break-all;
+  line-height: 1.5;
+}
+.info p { font-size: 12.5px; line-height: 1.65; color: #c5cffa; margin-top: 10px; }
+
+.side {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(13, 20, 49, 0.85), rgba(7, 11, 26, 0.95));
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 12px 10px;
+  overflow-x: auto;
+  flex: none;
+  border-bottom: 1px solid var(--stroke);
+}
+.tabs button {
+  flex: 1 0 auto;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+.tabs button:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.tabs button.on {
+  color: #04101f;
+  background: linear-gradient(135deg, #7dd3fc, #38bdf8 60%, #818cf8);
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.35);
+}
+.panes { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 28px; }
+.pane { display: none; flex-direction: column; gap: 12px; }
+.pane.on { display: flex; animation: swap 0.5s ease; }
+
+.card { padding: 14px 15px; border-radius: var(--radius); }
+.card h2 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card h2 .link { font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.card h2 .link:hover { color: var(--text); }
+.eq {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  padding: 14px 10px;
+  border-radius: 14px;
+  color: #bae6fd;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(99, 102, 241, 0.14));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  word-break: break-all;
+  transition: all 0.3s;
+}
+.eq.flash { animation: flash 0.5s ease; }
+.sub { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+.sub b { color: var(--text); font-weight: 500; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.orient { margin-top: 10px; }
+.orient .seg { width: 100%; }
+.orient .seg button { flex: 1; }
+
+.param { padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+.param + .param { margin-top: 10px; }
+.param label { font-size: 12px; font-weight: 500; line-height: 1.4; }
+.param label b { font-size: 15px; margin-right: 4px; color: var(--pc); }
+.param label small { display: block; font-size: 10.5px; color: var(--muted); font-weight: 400; }
+.param input[type=text] {
+  width: 86px;
+  flex: none;
+  padding: 5px 8px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  border-radius: 9px;
+  color: var(--pc);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+.param input[type=text]:focus { border-color: var(--pc); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07); }
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  margin: 12px 0 8px;
+  border-radius: 6px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.14);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pc, var(--cyan));
+  border: 3px solid #0b1026;
+  box-shadow: 0 0 0 2px var(--pc, var(--cyan)), 0 0 14px var(--pc, var(--cyan));
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--pc, var(--cyan));
+  border: 3px solid #0b1026;
+  box-shadow: 0 0 0 2px var(--pc, var(--cyan));
+  cursor: pointer;
+}
+.quick { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.quick span { font-size: 10px; color: var(--muted); margin-right: 2px; }
+.chip {
+  padding: 3px 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  border-radius: 8px;
+  color: var(--pc);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s;
+}
+.chip:hover { background: rgba(255, 255, 255, 0.14); border-color: var(--pc); }
+
+.presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+.preset {
+  text-align: left;
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.25s;
+}
+.preset:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.11); border-color: var(--cyan); }
+.preset small { display: block; font-size: 10.5px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+
+.probe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.stat { padding: 9px 11px; border-radius: 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08); }
+.stat small { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.5px; }
+.stat b { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+.stat.pf b { color: var(--violet); }
+.stat.pd b { color: var(--rose); }
+.eqmark { text-align: center; font-size: 12px; margin-top: 8px; color: var(--emerald); font-weight: 500; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 11.5px; color: #c5cffa; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+.elem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.elem {
+  text-align: left;
+  padding: 13px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.28s;
+  position: relative;
+  overflow: hidden;
+}
+.elem::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ec); box-shadow: 0 0 14px var(--ec); }
+.elem:hover { transform: translateY(-3px); border-color: var(--ec); background: rgba(255, 255, 255, 0.09); }
+.elem .t { font-size: 10.5px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ec); }
+.elem .v { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 600; margin-top: 7px; word-break: break-all; line-height: 1.5; }
+.elem .d { font-size: 10.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.elem.wide { grid-column: span 2; }
+
+.case { padding: 15px; border-radius: var(--radius); position: relative; overflow: hidden; }
+.case::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--cc); box-shadow: 0 0 16px var(--cc); }
+.case h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.case .math { overflow-x: auto; padding: 6px 4px; color: #e0e7ff; font-size: 14px; }
+.case p { font-size: 12.5px; line-height: 1.7; color: #c5cffa; margin-top: 6px; }
+.case ul { margin: 8px 0 0 18px; font-size: 12.5px; line-height: 1.7; color: #c5cffa; }
+.demo {
+  margin-top: 12px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 12px;
+  color: #04101f;
+  background: var(--cc);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.demo:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); }
+.intro { font-size: 12.5px; line-height: 1.75; color: #c5cffa; }
+
+.score {
+  padding: 6px 14px;
+  border-radius: 12px;
+  text-align: right;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+.score small { display: block; font-size: 9.5px; color: var(--muted); letter-spacing: 1px; }
+.score b { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: #bae6fd; }
+.progress { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.progress div { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #38bdf8, #a78bfa); transition: width 0.5s ease; }
+.qmeta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.qmeta span:last-child { color: var(--orange); }
+.qtitle { font-size: 14px; font-weight: 500; line-height: 1.75; }
+.opts { display: flex; flex-direction: column; gap: 9px; }
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.25s;
+}
+.opt:hover:not(:disabled) { background: rgba(255, 255, 255, 0.11); border-color: var(--cyan); transform: translateX(3px); }
+.opt b { color: var(--cyan); flex: none; }
+.opt.good { background: rgba(52, 211, 153, 0.16); border-color: var(--emerald); animation: pop 0.4s ease; }
+.opt.bad { background: rgba(251, 113, 133, 0.16); border-color: var(--rose); animation: shake 0.4s ease; }
+.opt:disabled { cursor: default; }
+.expl { padding: 13px 14px; border-radius: 14px; font-size: 12.5px; line-height: 1.7; color: #d8e0ff; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.35); animation: swap 0.4s ease; }
+.expl b { color: var(--cyan); }
+.btn-main {
+  width: 100%;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 14px;
+  color: #04101f;
+  background: linear-gradient(135deg, #7dd3fc, #38bdf8 60%, #818cf8);
+  box-shadow: 0 8px 22px rgba(56, 189, 248, 0.3);
+  transition: transform 0.2s;
+}
+.btn-main:hover { transform: translateY(-2px); }
+.result { text-align: center; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.result .trophy {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 36px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 0.05));
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  animation: pop 0.6s ease;
+}
+.result h3 { font-size: 19px; }
+.result p { font-size: 13px; color: #c5cffa; line-height: 1.7; max-width: 340px; }
+
+@keyframes ring { 0% { transform: scale(0.8); opacity: 0.9; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes pop { 0% { opacity: 0; transform: scale(0.9) translateY(6px); } 100% { opacity: 1; transform: none; } }
+@keyframes swap { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+@keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); } 100% { box-shadow: 0 0 0 16px rgba(56, 189, 248, 0); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 6px; }
+
+@media (max-width: 1100px) {
+  .app { grid-template-columns: minmax(0, 1fr) 390px; }
+  .toolbar { max-width: calc(100% - 28px); top: 78px; }
+  .notes { top: 142px; }
+}
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; min-height: 100vh; }
+  .stage { height: 68vh; min-height: 440px; }
+  .side { border-left: none; border-top: 1px solid var(--stroke); }
+  .panes { overflow: visible; }
+  .toolbar { max-width: calc(100% - 28px); }
+  .brand p { display: none; }
+}
+@media (max-width: 520px) {
+  .presets { grid-template-columns: 1fr; }
+  .elem-grid { grid-template-columns: 1fr; }
+  .elem.wide { grid-column: span 1; }
+  .hint { display: none; }
+}
+body.day { --glass: rgba(12, 20, 48, 0.6); --glass-strong: rgba(10, 16, 40, 0.84); --stroke: rgba(255, 255, 255, 0.2); }
+.envseg { width: 100%; }
+.envseg button { flex: 1; }
+.envlbl { font-size: 10.5px; color: var(--muted); margin: 12px 0 5px; letter-spacing: 0.4px; }
+</style>
+</head>
+<body class="day">
+<div class="app">
+  <section class="stage" id="stage">
+    <div id="threeHost"></div>
+    <div id="hotLayer"></div>
+
+    <div class="brand glass">
+      <div class="logo">∞</div>
+      <div>
+        <h1>PARABOLA 3D LAB <span>ม.4</span></h1>
+        <p>พาราโบลา & การวิเคราะห์ลิมิตสู่อินฟินิตี้</p>
+      </div>
+    </div>
+
+    <div class="toolbar glass">
+      <div class="seg">
+        <button id="v3d" class="on" onclick="setView('3d')">3D</button>
+        <button id="v2d" onclick="setView('2d')">2D</button>
+      </div>
+      <button class="tbtn on" id="tSurface" onclick="toggleSurface()">พื้นผิว</button>
+      <button class="tbtn" id="tRays" onclick="toggleRays()">ลำแสงสะท้อน</button>
+      <button class="tbtn" id="tRotate" onclick="toggleAutoRotate()">หมุนอัตโนมัติ</button>
+      <button class="tbtn" id="tNight" onclick="setEnv('night', !ENV.night)">🌙 กลางคืน</button>
+      <button class="tbtn" id="tRain" onclick="setEnv('rain', !ENV.rain)">🌧 ฝนตก</button>
+      <button class="tbtn on" id="tForest" onclick="setEnv('forest', !ENV.forest)">🌲 ป่าสน</button>
+      <button class="tbtn" onclick="zoomBy(1.25)" title="ซูมเข้า">＋</button>
+      <button class="tbtn" onclick="zoomBy(0.8)" title="ซูมออก">－</button>
+      <button class="tbtn" onclick="flyHome()" title="จัดมุมมอง">⌂ จัดมุม</button>
+    </div>
+
+    <div class="notes">
+      <div id="infChip" class="note glass hidden"></div>
+      <div id="stageNote" class="note warn glass hidden"></div>
+    </div>
+
+    <div class="hint glass" id="hint">ลากเพื่อหมุน • คลิกขวา/สองนิ้วเพื่อแพน • ล้อเมาส์/ถ่างนิ้วเพื่อซูม • คลิกจุดเรืองแสงเพื่อดูคำอธิบาย</div>
+    <div class="coord glass mono hidden" id="coordHud">x = <b id="cx">0.00</b> &nbsp; y = <b id="cy">0.00</b> &nbsp; เส้นโค้ง = <b id="cc">0.00</b></div>
+
+    <div class="info glass" id="infoCard">
+      <div class="head">
+        <span class="tag" id="icTag">V</span>
+        <button class="x" onclick="closeCard()" aria-label="ปิด">×</button>
+      </div>
+      <div class="body" id="icBody"></div>
+    </div>
+  </section>
+
+  <aside class="side">
+    <nav class="tabs" id="tabs">
+      <button class="on" data-tab="explore">สำรวจกราฟ</button>
+      <button data-tab="parts">องค์ประกอบ</button>
+      <button data-tab="limit">ทฤษฎีลิมิต ∞</button>
+      <button data-tab="quiz">แบบทดสอบ</button>
+    </nav>
+
+    <div class="panes">
+      <div class="pane on" id="pane-explore">
+        <div class="card glass">
+          <h2>สมการพาราโบลาปัจจุบัน
+            <button class="link" onclick="resetAll()">↺ รีเซ็ตค่า</button>
+          </h2>
+          <div class="eq" id="eqMain">(x − 0.00)² = 4(1.00)(y − 0.00)</div>
+          <div class="row" style="margin-top:10px;font-size:11.5px">
+            <span style="color:var(--muted)">รูปแบบโฟกัส (c = a)</span>
+            <span class="mono" id="eqFocus" style="color:var(--orange);font-weight:600"></span>
+          </div>
+          <div class="orient">
+            <div class="seg">
+              <button id="oV" class="on" onclick="setOrient(true)">แนวตั้ง (x−h)² = 4a(y−k)</button>
+              <button id="oH" onclick="setOrient(false)">แนวนอน (y−k)² = 4a(x−h)</button>
+            </div>
+          </div>
+          <p class="sub"><b>a</b> คือระยะโฟกัสแบบมีเครื่องหมาย: a &gt; 0 เปิดขึ้น/ขวา, a &lt; 0 เปิดลง/ซ้าย ระยะจริง = |a| และ a ≠ 0 สำหรับพาราโบลาปกติ</p>
+        </div>
+
+        <div class="card glass">
+          <h2>ปรับพารามิเตอร์ (a, h, k)</h2>
+          <div id="paramList"></div>
+        </div>
+
+        <div class="card glass">
+          <h2>จุดสำรวจ P — นิยามของพาราโบลา</h2>
+          <input type="range" id="probe" min="0" max="1" step="0.005" value="0.8" style="--pc:#34d399">
+          <div class="probe-grid">
+            <div class="stat pf"><small>PF • ระยะถึงโฟกัส</small><b id="pf">0.00</b></div>
+            <div class="stat pd"><small>PD • ระยะถึงไดเรกตริกซ์</small><b id="pd">0.00</b></div>
+          </div>
+          <div class="eqmark" id="pEq">PF = PD เสมอ</div>
+        </div>
+
+        <div class="card glass">
+          <h2>ชุดตัวอย่างสภาวะพิเศษ</h2>
+          <div class="presets" id="presetList"></div>
+        </div>
+
+        <div class="card glass">
+          <h2>บรรยากาศแวดล้อม</h2>
+          <div class="envlbl" style="margin-top:0">ช่วงเวลา</div>
+          <div class="seg envseg"><button id="eDay" class="on" onclick="setEnv('night', false)">☀ กลางวัน</button><button id="eNight" onclick="setEnv('night', true)">🌙 กลางคืน</button></div>
+          <div class="envlbl">สภาพอากาศ</div>
+          <div class="seg envseg"><button id="eClear" class="on" onclick="setEnv('rain', false)">🌤 แจ่มใส</button><button id="eRain" onclick="setEnv('rain', true)">🌧 ฝนตก</button></div>
+          <div class="envlbl">ป่าสนรอบฉาก</div>
+          <div class="seg envseg"><button id="eOn" class="on" onclick="setEnv('forest', true)">🌲 แสดงป่า</button><button id="eOff" onclick="setEnv('forest', false)">ซ่อนป่า</button></div>
+          <div class="envlbl">ความแรงของฝน</div>
+          <input type="range" id="rainAmt" min="0.15" max="1" step="0.05" value="0.6" style="--pc:#38bdf8" oninput="ENV.amt = parseFloat(this.value)">
+          <p class="sub">เปลี่ยนฟ้า แสง หมอก และสีของภูเขา/ต้นสนอย่างนุ่มนวล ตอนฝนตกจะมีฟ้าแลบเป็นระยะ ทุกโหมดยังหมุน แพน และซูมได้ตามปกติ</p>
+        </div>
+
+        <div class="card glass">
+          <h2>สัญลักษณ์ในฉาก 3D</h2>
+          <div class="legend">
+            <span><i style="background:#38bdf8"></i>พาราโบลา / พื้นผิว</span>
+            <span><i style="background:#fb923c"></i>จุดยอด V</span>
+            <span><i style="background:#a78bfa"></i>จุดโฟกัส F</span>
+            <span><i style="background:#fb7185"></i>ไดเรกตริกซ์</span>
+            <span><i style="background:#fbbf24"></i>ลาตัสเรกตั้ม</span>
+            <span><i style="background:#34d399"></i>จุดสำรวจ P</span>
+          </div>
+          <p class="sub">มุมมอง 3D แสดงเส้นพาราโบลาบนระนาบ z = 0 และพื้นผิวพาราโบลอยด์ที่เกิดจากการหมุนรอบแกนสมมาตร แกน x = แดง, y = เขียว, z = น้ำเงิน</p>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-parts">
+        <p class="intro">คลิกการ์ดเพื่อเปิดคำอธิบายในฉาก 3D ค่าทุกช่องคำนวณสดจากพารามิเตอร์ที่คุณปรับอยู่ตอนนี้</p>
+        <div class="elem-grid" id="elemGrid"></div>
+      </div>
+
+      <div class="pane" id="pane-limit">
+        <div class="card glass">
+          <h2>การวิเคราะห์เชิงลึก: สภาวะเข้าสู่อินฟินิตี้</h2>
+          <p class="intro">ในแคลคูลัสและเรขาคณิตวิเคราะห์ เมื่อพารามิเตอร์ $a, h, k$ ของพาราโบลาเข้าสู่อินฟินิตี้ ($\infty$) จะเกิดพฤติกรรมลิมิตแบบสุดขั้ว ลองกดปุ่มเพื่อดูภาพในฉาก 3D</p>
+        </div>
+
+        <div class="case glass" style="--cc:#38bdf8">
+          <h3>กรณี 1: |a| → ∞ กราฟบานกว้าง</h3>
+          <div class="math">$$y-k=\frac{(x-h)^2}{4a},\qquad \lim_{|a|\to\infty}(y-k)=0$$</div>
+          <p>สำหรับ x คงที่และ h, k คงที่ กราฟแนวตั้งเข้าใกล้เส้น y = k ส่วนกราฟแนวนอนเข้าใกล้เส้น x = h ระยะโฟกัส |a| เพิ่มขึ้น กราฟจึงแบนราบ ไม่ใช่บีบแคบ</p>
+          <button class="demo" onclick="runDemo('inf-a')">ดูใน 3D: a → +∞</button>
+        </div>
+
+        <div class="case glass" style="--cc:#fb923c">
+          <h3>กรณี 2: a → 0 กราฟแคบลง</h3>
+          <div class="math">$$(x-h)^2=4a(y-k),\qquad |x-h|=\sqrt{4a(y-k)}$$</div>
+          <p>ที่ระดับ y ในด้านที่กราฟเปิด ความกว้างเข้าใกล้ศูนย์ โฟกัสและไดเรกตริกซ์เข้าใกล้จุดยอด เมื่อ a ≠ 0 กราฟยังเป็นพาราโบลา แต่เมื่อแทน a = 0 จะได้ x = h (แนวตั้ง) หรือ y = k (แนวนอน) ซึ่งเป็นกรณีเสื่อม ไม่ใช่พาราโบลาปกติ</p>
+          <button class="demo" onclick="runDemo('small-a')">ดูใน 3D: a → 0</button>
+          <button class="demo" onclick="runDemo('zero-a')" style="margin-left:6px;background:#fcd9b0">a = 0 (เสื่อม)</button>
+        </div>
+
+        <div class="case glass" style="--cc:#a78bfa">
+          <h3>กรณี 3: h หรือ k → ±∞ จุดยอดหนีไปไกลสุดขอบ</h3>
+          <div class="math">$$\lim_{h\to\infty}V(h,k)=(\infty,k)$$</div>
+          <ul>
+            <li>เมื่อ $h\to\pm\infty$ หรือ $k\to\pm\infty$ จุดยอดและจุดโฟกัสย้ายไปไกลอย่างไร้ขีดจำกัด</li>
+            <li>ฉาก 3D จะเลื่อนกล้องตามจุดยอดอัตโนมัติ และแสดงลูกศรบอกทิศทางที่วิ่งเข้าสู่ขอบฟ้า</li>
+            <li>รูปร่างของพาราโบลาไม่เปลี่ยน มีเพียงตำแหน่งที่เคลื่อนที่ (Translation)</li>
+          </ul>
+          <button class="demo" onclick="runDemo('inf-h')">ดูใน 3D: h → +∞</button>
+          <button class="demo" onclick="runDemo('inf-k')" style="margin-left:6px;background:#c9b8fb">k → −∞</button>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-quiz">
+        <div class="card glass">
+          <div class="row" style="margin-bottom:12px">
+            <div>
+              <div style="font-size:14px;font-weight:600">แบบทดสอบวัดความเข้าใจ</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">จุดยอด โฟกัส ไดเรกตริกซ์ และสภาวะอินฟินิตี้</div>
+            </div>
+            <div class="score"><small>คะแนน</small><b id="qScore">0 / 5</b></div>
+          </div>
+          <div class="progress"><div id="qBar"></div></div>
+          <div id="qBox" style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+            <div class="qmeta"><span id="qStep"></span><span id="qCat"></span></div>
+            <div class="qtitle" id="qTitle"></div>
+            <div class="opts" id="qOpts"></div>
+            <div class="expl hidden" id="qExpl"></div>
+            <button class="btn-main hidden" id="qNext" onclick="nextQuiz()">ข้อถัดไป →</button>
+          </div>
+          <div class="result hidden" id="qResult">
+            <div class="trophy">🏆</div>
+            <h3>ทดสอบเสร็จสิ้น!</h3>
+            <p id="qFinal"></p>
+            <button class="btn-main" onclick="restartQuiz()">↺ ทำแบบทดสอบอีกครั้ง</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const TH = window.THREE;
+
+const S = { a: 1, h: 0, k: 0, vertical: true, view: '3d', rays: false, surface: true, probe: 0.8 };
+
+const PARAMS = [
+  { k: 'a', title: 'ระยะโฟกัสแบบมีเครื่องหมาย', sub: 'ความกว้าง / ทิศทางการเปิด', min: -5, max: 5, step: 0.05, color: '#38bdf8',
+    quick: [['+∞', 'Infinity'], ['−∞', '-Infinity'], ['0', 0], ['100', 100], ['−100', -100]] },
+  { k: 'h', title: 'พิกัดจุดยอด', sub: 'เลื่อนขนานแกน X', min: -20, max: 20, step: 0.5, color: '#fb923c',
+    quick: [['+∞', 'Infinity'], ['−∞', '-Infinity'], ['0', 0], ['500', 500], ['−500', -500]] },
+  { k: 'k', title: 'พิกัดจุดยอด', sub: 'เลื่อนขนานแกน Y', min: -20, max: 20, step: 0.5, color: '#a78bfa',
+    quick: [['+∞', 'Infinity'], ['−∞', '-Infinity'], ['0', 0], ['500', 500], ['−500', -500]] }
+];
+
+const PRESETS = [
+  { id: 'standard', icon: '📌', name: 'พาราโบลามาตรฐาน', sub: 'a = 1, h = 0, k = 0', set: { a: 1, h: 0, k: 0 } },
+  { id: 'inf-a', icon: '⚡', name: 'a → +∞', sub: 'แบนราบเป็นเส้นตรง', set: { a: Infinity, h: 0, k: 0 } },
+  { id: 'small-a', icon: '🔬', name: 'a → 0', sub: 'แคบลงจนใกล้เสื่อม', set: { a: 0.08, h: 0, k: 0 } },
+  { id: 'zero-a', icon: '➖', name: 'a = 0', sub: 'กรณีเสื่อม (เส้นตรง)', set: { a: 0, h: 0, k: 0 } },
+  { id: 'inf-h', icon: '🌌', name: 'h → +∞', sub: 'จุดยอดไกลสุดขวา', set: { a: 0.5, h: Infinity, k: 0 } },
+  { id: 'inf-k', icon: '🚀', name: 'k → −∞', sub: 'จุดยอดดิ่งลงล่างสุด', set: { a: 0.5, h: 0, k: -Infinity } },
+  { id: 'huge', icon: '💥', name: 'ค่ามหาศาล', sub: 'a = 0.01, h = 1500, k = −800', set: { a: 0.01, h: 1500, k: -800 } },
+  { id: 'down', icon: '🔽', name: 'พาราโบลาคว่ำ', sub: 'a = −2, จุดยอด (1, 3)', set: { a: -2, h: 1, k: 3 } }
+];
+
+const ELEMS = [
+  { id: 'V', color: '#fb923c', title: 'จุดยอด (Vertex)', short: 'V' },
+  { id: 'F', color: '#a78bfa', title: 'จุดโฟกัส (Focus)', short: 'F' },
+  { id: 'D', color: '#fb7185', title: 'ไดเรกตริกซ์ (Directrix)', short: 'D' },
+  { id: 'A', color: '#38bdf8', title: 'แกนสมมาตร (Axis)', short: 'A' },
+  { id: 'L', color: '#fbbf24', title: 'ลาตัสเรกตั้ม (Latus Rectum)', short: 'LR' },
+  { id: 'G', color: '#34d399', title: 'รูปแบบทั่วไป (General Form)', short: 'G' }
+];
+
+const HSDEF = [
+  { id: 'V', color: '#fb923c', label: 'จุดยอด V' },
+  { id: 'F', color: '#a78bfa', label: 'จุดโฟกัส F' },
+  { id: 'D', color: '#fb7185', label: 'ไดเรกตริกซ์' },
+  { id: 'A', color: '#38bdf8', label: 'แกนสมมาตร' },
+  { id: 'L', color: '#fbbf24', label: 'ลาตัสเรกตั้ม' },
+  { id: 'P', color: '#34d399', label: 'จุดสำรวจ P' }
+];
+
+const QUIZ = [
+  { cat: 'ลิมิตสู่อินฟินิตี้', title: 'เมื่อพารามิเตอร์ a ของพาราโบลา (x − h)² = 4a(y − k) มีค่าเข้าสู่อินฟินิตี้ (|a| → ∞) กราฟพาราโบลาจะมีพฤติกรรมอย่างไร?',
+    options: ['กราฟบานกว้างออกจนแบนราบกลายเป็นเส้นตรงแนวนอน', 'กราฟจะบีบแคบลงเรื่อยๆ จนกลายสภาพเป็นเส้นตรงแนวตั้ง x = h', 'จุดยอดของพาราโบลาจะหายไป', 'พาราโบลาจะเปลี่ยนทิศทางการเปิดเป็นหงายและคว่ำพร้อมกัน'], correct: 0,
+    expl: 'เมื่อ |a| → ∞ จะได้ y − k = (x − h)²/(4a) → 0 สำหรับ x คงที่ กราฟจึงบานกว้างและเข้าใกล้เส้น y = k ส่วนระยะโฟกัส |a| เพิ่มขึ้น' },
+  { cat: 'องค์ประกอบพาราโบลา', title: 'สมการพาราโบลา (x + 1)² = 4(2)(y − 3) มีจุดยอด (Vertex) อยู่ที่พิกัดใด?',
+    options: ['(1, −3)', '(−1, 3)', '(3, −1)', '(−3, 1)'], correct: 1,
+    expl: 'เทียบกับสมการมาตรฐาน (x − h)² = 4a(y − k) จะได้ h = −1 และ k = 3 ดังนั้นจุดยอด V(h, k) = (−1, 3)' },
+  { cat: 'ระยะโฟกัส c', title: 'พาราโบลาเปิดขึ้นบน มีสมการ (x − 2)² = 4(1)(y − 1) ระยะโฟกัส c มีค่าเท่าใด และจุดโฟกัสอยู่ที่ใด?',
+    options: ['c = 1.0, จุดโฟกัส (2, 2)', 'c = 0.25, จุดโฟกัส (2, 1.25)', 'c = 4.0, จุดโฟกัส (2, 5)', 'c = 0.5, จุดโฟกัส (2.5, 1)'], correct: 0,
+    expl: 'ในสมการ (x − h)² = 4a(y − k) มี c = a = 1.0 ดังนั้นจุดโฟกัส F(h, k + c) = (2, 1 + 1) = (2, 2)' },
+  { cat: 'ลิมิตระยะโฟกัส', title: 'เมื่อค่า a เข้าใกล้ 0 (a → 0) เส้นไดเรกตริกซ์และจุดโฟกัสจะมีลักษณะอย่างไร?',
+    options: ['ระยะจากโฟกัสและไดเรกตริกซ์ถึงจุดยอดลดลงเข้าใกล้ศูนย์', 'จุดโฟกัสจะอยู่ห่างจากจุดยอดมากขึ้นเรื่อยๆ', 'เส้นไดเรกตริกซ์จะเลื่อนหนีไปที่อินฟินิตี้', 'ระยะโฟกัส c จะเพิ่มขึ้นเป็นสองเท่า'], correct: 0,
+    expl: 'เนื่องจาก c = a เมื่อ a → 0 ระยะ |a| จึงเข้าใกล้ศูนย์ โฟกัสเข้าใกล้จุดยอดและไดเรกตริกซ์เข้าใกล้เส้นที่ผ่านจุดยอด โดย a = 0 เป็นกรณีเสื่อม' },
+  { cat: 'ความยาวลาตัสเรกตั้ม', title: 'ความยาวของส่วนของเส้นตรงลาตัสเรกตั้ม (Latus Rectum) คำนวณได้จากสูตรใด?',
+    options: ['|2a|', '|4a|', '|c²|', '|a · h · k|'], correct: 1,
+    expl: 'ลาตัสเรกตั้มคือคอร์ดที่ผ่านโฟกัสและตั้งฉากกับแกนสมมาตร มีความยาวเท่ากับ |4a| เสมอ' }
+];
+
+let threeReady = false, scene, camera, renderer, controls, group, host, stage;
+let keyLight, stars, tween = null, lastT = 0;
+let R3 = {}, C = { center: new TH.Vector3(), dist: 24, R: 4, sx: 0, sy: 0 };
+let pulses = [];
+let HS = {};
+let cardId = null;
+let quizIndex = 0, quizScore = 0, quizAnswered = false;
+const tmpV = new TH.Vector3();
+const raycaster = new TH.Raycaster();
+const planeZ = new TH.Plane(new TH.Vector3(0, 0, 1), 0);
+
+function fmt(v, d) {
+  if (d === undefined) d = 2;
+  if (Number.isNaN(v)) return 'ไม่กำหนด';
+  if (!isFinite(v)) return v > 0 ? '+∞' : '−∞';
+  return v.toFixed(d).replace('-', '−');
+}
+function absStr(v) { return isFinite(v) ? Math.abs(v).toFixed(2) : '∞'; }
+function term(v) { return v >= 0 ? '− ' + absStr(v) : '+ ' + absStr(v); }
+function effVal(v) { return isFinite(v) ? v : (v > 0 ? 1e6 : -1e6); }
+
+function eqString(aText) {
+  const ht = term(S.h), kt = term(S.k);
+  return S.vertical ? '(x ' + ht + ')² = 4(' + aText + ')(y ' + kt + ')' : '(y ' + kt + ')² = 4(' + aText + ')(x ' + ht + ')';
+}
+
+function geoValues() {
+  const a = S.a, h = S.h, k = S.k, v = S.vertical;
+  const degenerate = a === 0;
+  const finiteOK = Number.isFinite(a) && Number.isFinite(h) && Number.isFinite(k) && a !== 0;
+  const F = v ? [h, k + a] : [h + a, k];
+  const dir = v ? 'y = ' + fmt(k - a) : 'x = ' + fmt(h - a);
+  const axis = v ? 'x = ' + fmt(h) : 'y = ' + fmt(k);
+  const lat = Math.abs(4 * a);
+  let ends = 'ไม่กำหนดสำหรับกรณีเสื่อมหรือภาพลิมิต';
+  let general = degenerate ? (v ? 'a = 0: x = h (กรณีเสื่อม ไม่ใช่พาราโบลา)' : 'a = 0: y = k (กรณีเสื่อม ไม่ใช่พาราโบลา)') : 'ภาพลิมิต ไม่ใช่สมการที่ใช้ค่าอนันต์จริง';
+  if (finiteOK) {
+    const half = Math.abs(2 * a);
+    ends = v
+      ? '(' + fmt(h - half) + ', ' + fmt(k + a) + ') และ (' + fmt(h + half) + ', ' + fmt(k + a) + ')'
+      : '(' + fmt(h + a) + ', ' + fmt(k - half) + ') และ (' + fmt(h + a) + ', ' + fmt(k + half) + ')';
+    const co = 1 / (4 * a), shift = v ? h : k, level = v ? k : h;
+    const b = -2 * co * shift, cg = co * shift * shift + level;
+    const sb = b >= 0 ? '+ ' + b.toFixed(4) : '− ' + Math.abs(b).toFixed(4);
+    const sc = cg >= 0 ? '+ ' + cg.toFixed(4) : '− ' + Math.abs(cg).toFixed(4);
+    general = v ? 'y = ' + co.toFixed(4) + 'x² ' + sb + 'x ' + sc : 'x = ' + co.toFixed(4) + 'y² ' + sb + 'y ' + sc;
+  }
+  return { degenerate, finiteOK, F, dir, axis, lat, ends, general };
+}
+
+function probeValues() {
+  const a = isFinite(S.a) ? S.a : Math.sign(S.a) * 2000;
+  if (a === 0) return null;
+  const t = (-1 + 2 * S.probe) * C.R;
+  const dy = t * t / (4 * a);
+  const pf = Math.hypot(t, dy - a);
+  const pd = Math.abs(dy + a);
+  return { t, pf, pd };
+}
+
+function elementInfo(id) {
+  const g = geoValues();
+  const dg = g.degenerate;
+  const na = 'ไม่กำหนดในกรณีเสื่อม';
+  if (id === 'V') return { tag: 'V', color: '#fb923c', title: 'จุดยอด (Vertex)', val: 'V = (' + fmt(S.h) + ', ' + fmt(S.k) + ')', desc: 'จุดยอดคือจุดเลี้ยวของกราฟ เป็นจุดต่ำสุดหรือสูงสุด และอยู่กึ่งกลางระหว่างจุดโฟกัสกับเส้นไดเรกตริกซ์ ค่า h และ k เป็นตัวเลื่อนกราฟตามแนวแกน X และ Y' };
+  if (id === 'F') return { tag: 'F', color: '#a78bfa', title: 'จุดโฟกัส (Focus)', val: dg ? na : 'F = (' + fmt(g.F[0]) + ', ' + fmt(g.F[1]) + ')', desc: 'c = a = ' + (isFinite(S.a) ? S.a.toFixed(4) : fmt(S.a)) + ' ระยะจากจุดยอดถึงโฟกัสเท่ากับ |a| วัดไปตามแกนสมมาตรด้านที่กราฟเปิด สัญญาณที่ตกกระทบขนานแกนจะสะท้อนมารวมที่จุดนี้' };
+  if (id === 'D') return { tag: 'DIRECTRIX', color: '#fb7185', title: 'เส้นไดเรกตริกซ์ (Directrix)', val: dg ? na : g.dir, desc: 'เส้นตรงที่ตั้งฉากกับแกนสมมาตร อยู่ห่างจากจุดยอดเท่ากับ |a| คนละฝั่งกับโฟกัส จุดทุกจุดบนพาราโบลามีระยะถึงโฟกัสเท่ากับระยะถึงเส้นนี้' };
+  if (id === 'A') return { tag: 'AXIS', color: '#38bdf8', title: 'แกนสมมาตร (Axis of Symmetry)', val: g.axis, desc: 'เส้นตรงที่ผ่านจุดยอดและโฟกัส แบ่งกราฟออกเป็นสองฝั่งที่สะท้อนกันพอดี ในรูป 3 มิติ พื้นผิวพาราโบลอยด์เกิดจากการหมุนกราฟรอบแกนนี้' };
+  if (id === 'L') return { tag: 'LATUS RECTUM', color: '#fbbf24', title: 'ลาตัสเรกตั้ม (Latus Rectum)', val: dg ? na : 'ความยาว |4a| = ' + (isFinite(g.lat) ? g.lat.toFixed(3) : '∞') + '\nจุดปลาย: ' + g.ends, desc: 'คอร์ดที่ผ่านจุดโฟกัสและตั้งฉากกับแกนสมมาตร ความยาว |4a| บอกความกว้างของกราฟที่ระดับโฟกัส ในฉาก 3D ส่วนนี้หมุนเป็นวงกลมรอบแกน' };
+  if (id === 'G') return { tag: 'GENERAL FORM', color: '#34d399', title: 'รูปแบบทั่วไป (General Form)', val: g.general, desc: 'กระจายสมการมาตรฐานได้เป็น ax² + bx + c โดย b = −2ah และ c = ah² + k เมื่อใช้สัมประสิทธิ์ 1/(4a) ของกราฟนี้' };
+  const p = probeValues();
+  return { tag: 'POINT P', color: '#34d399', title: 'จุดสำรวจ P บนพาราโบลา', val: p ? 'PF = ' + p.pf.toFixed(3) + '\nPD = ' + p.pd.toFixed(3) : na, desc: 'ลากแถบเลื่อน “จุดสำรวจ P” เพื่อเคลื่อนจุดไปตามกราฟ จะเห็นว่าระยะ PF (ถึงโฟกัส) และ PD (ถึงไดเรกตริกซ์) เท่ากันทุกตำแหน่ง นี่คือนิยามของพาราโบลา' };
+}
+
+function showCard(id) {
+  cardId = id;
+  const info = elementInfo(id);
+  const card = document.getElementById('infoCard');
+  card.style.setProperty('--ic', info.color);
+  document.getElementById('icTag').textContent = info.tag;
+  const body = document.getElementById('icBody');
+  const swap = body.cloneNode(false);
+  swap.innerHTML = '<h3></h3><div class="val"></div><p></p>';
+  swap.querySelector('h3').textContent = info.title;
+  swap.querySelector('.val').innerHTML = info.val.split('\n').map(function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }).join('<br>');
+  swap.querySelector('p').textContent = info.desc;
+  body.parentNode.replaceChild(swap, body);
+  card.classList.add('show');
+  for (const key in HS) HS[key].el.classList.toggle('active', key === id);
+}
+
+function closeCard() {
+  cardId = null;
+  document.getElementById('infoCard').classList.remove('show');
+  for (const key in HS) HS[key].el.classList.remove('active');
+}
+
+function refreshCardValue() {
+  if (!cardId) return;
+  const info = elementInfo(cardId);
+  const v = document.querySelector('#icBody .val');
+  if (v) v.innerHTML = info.val.split('\n').map(function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }).join('<br>');
+}
+
+function openElement(id, fly) {
+  showCard(id);
+  if (fly && HS[id] && HS[id].pos && threeReady) focusOn(HS[id].pos);
+}
+
+function buildParamUI() {
+  const box = document.getElementById('paramList');
+  box.innerHTML = '';
+  PARAMS.forEach(function (p) {
+    const el = document.createElement('div');
+    el.className = 'param';
+    el.style.setProperty('--pc', p.color);
+    el.innerHTML =
+      '<div class="row"><label><b>' + p.k + '</b>' + p.title + '<small>' + p.sub + '</small></label>' +
+      '<input type="text" id="in-' + p.k + '" value="0.00"></div>' +
+      '<input type="range" id="sl-' + p.k + '" min="' + p.min + '" max="' + p.max + '" step="' + p.step + '" value="0">' +
+      '<div class="quick"><span>ทางลัด ∞:</span></div>';
+    const q = el.querySelector('.quick');
+    p.quick.forEach(function (c) {
+      const b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = c[0];
+      b.onclick = function () { setParam(p.k, c[1]); };
+      q.appendChild(b);
+    });
+    box.appendChild(el);
+    el.querySelector('#sl-' + p.k).addEventListener('input', function (e) { setParam(p.k, parseFloat(e.target.value)); });
+    el.querySelector('#in-' + p.k).addEventListener('change', function (e) { setParam(p.k, parseInput(e.target.value)); });
+  });
+}
+
+function parseInput(txt) {
+  const c = String(txt).trim().toLowerCase().replace('−', '-').replace('∞', 'inf');
+  if (/^\+?(inf|infinity)$/.test(c)) return Infinity;
+  if (/^-(inf|infinity)$/.test(c)) return -Infinity;
+  const n = parseFloat(c);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+function setParam(key, val) {
+  if (val === 'Infinity') val = Infinity;
+  else if (val === '-Infinity') val = -Infinity;
+  S[key] = val;
+  syncInputs();
+  refresh();
+}
+
+function syncInputs() {
+  PARAMS.forEach(function (p) {
+    const v = S[p.k];
+    document.getElementById('in-' + p.k).value = isFinite(v) ? v.toFixed(2) : (v > 0 ? '+∞' : '−∞');
+    const sl = document.getElementById('sl-' + p.k);
+    if (isFinite(v)) sl.value = Math.max(p.min, Math.min(p.max, v));
+  });
+}
+
+function buildPresetUI() {
+  const box = document.getElementById('presetList');
+  PRESETS.forEach(function (p) {
+    const b = document.createElement('button');
+    b.className = 'preset';
+    b.innerHTML = p.icon + ' ' + p.name + '<small>' + p.sub + '</small>';
+    b.onclick = function () { applyPreset(p.id); };
+    box.appendChild(b);
+  });
+}
+
+function applyPreset(id) {
+  const p = PRESETS.find(function (x) { return x.id === id; });
+  if (!p) return;
+  S.a = p.set.a; S.h = p.set.h; S.k = p.set.k;
+  S.vertical = true;
+  updateOrientButtons();
+  syncInputs();
+  refresh();
+  flyHome();
+}
+
+function runDemo(id) {
+  applyPreset(id);
+  switchTab('explore');
+}
+
+function resetAll() {
+  S.a = 1; S.h = 0; S.k = 0; S.vertical = true; S.probe = 0.8;
+  document.getElementById('probe').value = 0.8;
+  updateOrientButtons();
+  syncInputs();
+  refresh();
+  flyHome();
+}
+
+function setOrient(v) {
+  S.vertical = v;
+  updateOrientButtons();
+  refresh();
+  flyHome();
+}
+
+function updateOrientButtons() {
+  document.getElementById('oV').classList.toggle('on', S.vertical);
+  document.getElementById('oH').classList.toggle('on', !S.vertical);
+}
+
+function buildElemGrid() {
+  const grid = document.getElementById('elemGrid');
+  ELEMS.forEach(function (e) {
+    const b = document.createElement('button');
+    b.className = 'elem' + (e.id === 'G' ? ' wide' : '');
+    b.style.setProperty('--ec', e.color);
+    b.innerHTML = '<div class="t">' + e.title + '</div><div class="v" id="ev-' + e.id + '"></div><div class="d">แตะเพื่อดูคำอธิบายในฉาก 3D</div>';
+    b.onclick = function () { openElement(e.id, true); };
+    grid.appendChild(b);
+  });
+}
+
+function updateText() {
+  const aText = isFinite(S.a) ? S.a.toFixed(2) : (S.a > 0 ? '∞' : '−∞');
+  const eq = document.getElementById('eqMain');
+  eq.textContent = eqString(aText);
+  eq.classList.remove('flash');
+  void eq.offsetWidth;
+  eq.classList.add('flash');
+  document.getElementById('eqFocus').textContent = eqString(isFinite(S.a) ? S.a.toFixed(4) : aText);
+
+  const g = geoValues();
+  const na = 'ไม่กำหนด';
+  const vals = {
+    V: '(' + fmt(S.h) + ', ' + fmt(S.k) + ')',
+    F: g.degenerate ? na : '(' + fmt(g.F[0]) + ', ' + fmt(g.F[1]) + ')',
+    D: g.degenerate ? na : g.dir,
+    A: g.axis,
+    L: g.degenerate ? na : '|4a| = ' + (isFinite(g.lat) ? g.lat.toFixed(3) : '∞'),
+    G: g.general
+  };
+  ELEMS.forEach(function (e) { document.getElementById('ev-' + e.id).textContent = vals[e.id]; });
+
+  const inf = [];
+  if (!isFinite(S.a)) inf.push('a = ' + (S.a > 0 ? '+∞' : '−∞'));
+  if (!isFinite(S.h)) inf.push('h = ' + (S.h > 0 ? '+∞' : '−∞'));
+  if (!isFinite(S.k)) inf.push('k = ' + (S.k > 0 ? '+∞' : '−∞'));
+  const chip = document.getElementById('infChip');
+  if (inf.length) {
+    chip.innerHTML = '⚛ สภาวะอินฟินิตี้เปิดใช้งาน: <b>' + inf.join(', ') + '</b>';
+    chip.classList.remove('hidden');
+  } else chip.classList.add('hidden');
+
+  const parts = [];
+  if (S.a === 0) parts.push('a = 0 เป็นกรณีเสื่อม: สมการกลายเป็นเส้นตรง ไม่ใช่พาราโบลา จึงไม่มีโฟกัส ไดเรกตริกซ์ หรือพื้นผิว 3D');
+  if (!isFinite(S.a)) parts.push('ภาพลิมิต |a| → ∞: ฉากใช้ค่า |a| = 2000 เพื่อแสดงแนวโน้ม กราฟแบนราบเข้าใกล้เส้นตรงผ่านจุดยอด');
+  if (!isFinite(S.h) || !isFinite(S.k)) parts.push('จุดยอดอยู่ ณ อนันต์: กล้องเลื่อนตามจุดยอด ลูกศรชี้ทิศที่วิ่งเข้าสู่ขอบฟ้า');
+  const note = document.getElementById('stageNote');
+  if (parts.length) {
+    note.innerHTML = parts.join('<br>');
+    note.classList.remove('hidden');
+  } else note.classList.add('hidden');
+}
+
+function updateProbeText() {
+  const p = probeValues();
+  document.getElementById('pf').textContent = p ? p.pf.toFixed(3) : '—';
+  document.getElementById('pd').textContent = p ? p.pd.toFixed(3) : '—';
+  document.getElementById('pEq').textContent = p ? (Math.abs(p.pf - p.pd) < 1e-6 ? 'PF = PD ✓ เท่ากันทุกตำแหน่งของ P' : 'PF ≈ PD') : 'ไม่มีจุดสำรวจในกรณีเสื่อม';
+}
+
+function refresh() {
+  updateText();
+  if (threeReady) build3D();
+  updateProbeText();
+  refreshCardValue();
+}
+
+function makeGlowTexture(color) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, color);
+  g.addColorStop(0.25, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 128, 128);
+  return new TH.CanvasTexture(c);
+}
+
+function init3D() {
+  host = document.getElementById('threeHost');
+  stage = document.getElementById('stage');
+  if (!TH || !TH.OrbitControls) {
+    const n = document.getElementById('stageNote');
+    n.textContent = 'โหลดไลบรารี 3D ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรชหน้า';
+    n.classList.remove('hidden');
+    return;
+  }
+  const w = host.clientWidth || 800, h = host.clientHeight || 600;
+  scene = new TH.Scene();
+  scene.fog = new TH.Fog(0x0a1230, 70, 420);
+  camera = new TH.PerspectiveCamera(45, w / h, 0.1, 30000);
+  renderer = new TH.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h);
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputEncoding = TH.sRGBEncoding;
+  renderer.toneMapping = TH.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = TH.PCFSoftShadowMap;
+  host.appendChild(renderer.domElement);
+
+  controls = new TH.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.autoRotateSpeed = 1.4;
+  controls.minDistance = 2;
+  controls.maxDistance = 600;
+  controls.screenSpacePanning = true;
+
+  amb = new TH.AmbientLight(0x9db4ff, 0.55);
+  scene.add(amb);
+  hemi = new TH.HemisphereLight(0xbfdcff, 0x1a1040, 0.45);
+  scene.add(hemi);
+  keyLight = new TH.DirectionalLight(0xffffff, 0.95);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(1024, 1024);
+  keyLight.shadow.camera.left = -24;
+  keyLight.shadow.camera.right = 24;
+  keyLight.shadow.camera.top = 24;
+  keyLight.shadow.camera.bottom = -24;
+  keyLight.shadow.camera.near = 1;
+  keyLight.shadow.camera.far = 90;
+  keyLight.shadow.bias = -0.0005;
+  scene.add(keyLight);
+  scene.add(keyLight.target);
+  const rim = new TH.DirectionalLight(0x8b5cf6, 0.4);
+  rim.position.set(-14, 6, -12);
+  scene.add(rim);
+
+  const sp = [];
+  for (let i = 0; i < 700; i++) {
+    const r = 140 + Math.random() * 260;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.acos(2 * Math.random() - 1);
+    sp.push(r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th));
+  }
+  const sg = new TH.BufferGeometry();
+  sg.setAttribute('position', new TH.Float32BufferAttribute(sp, 3));
+  stars = new TH.Points(sg, new TH.PointsMaterial({ color: 0xbcd0ff, size: 0.9, sizeAttenuation: true, transparent: true, opacity: 0.7, fog: false, depthWrite: false }));
+  scene.add(stars);
+
+  group = new TH.Group();
+  scene.add(group);
+  threeReady = true;
+  buildEnv();
+
+  renderer.domElement.addEventListener('pointermove', onPointerMove);
+  new ResizeObserver(resize3D).observe(host);
+
+  requestAnimationFrame(animate);
+}
+
+function resize3D() {
+  if (!threeReady) return;
+  const w = host.clientWidth, h = host.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, (now - lastT) / 1000 || 0.016);
+  lastT = now;
+  if (tween) {
+    tween.t += dt / tween.dur;
+    const u = Math.min(1, tween.t);
+    const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    camera.position.lerpVectors(tween.fp, tween.tp, e);
+    controls.target.lerpVectors(tween.ft, tween.tt, e);
+    if (u >= 1) tween = null;
+  }
+  updateEnv(dt, now);
+  const s = 1 + 0.16 * Math.sin(now / 420);
+  for (let i = 0; i < pulses.length; i++) pulses[i].spr.scale.setScalar(pulses[i].base * s);
+  stars.rotation.y += dt * 0.004;
+  controls.update();
+  renderer.render(scene, camera);
+  projectHotspots();
+}
+
+function projectHotspots() {
+  const w = host.clientWidth, h = host.clientHeight;
+  for (const id in HS) {
+    const o = HS[id];
+    if (!o.pos) { o.el.style.display = 'none'; continue; }
+    tmpV.copy(o.pos).project(camera);
+    const x = (tmpV.x * 0.5 + 0.5) * w, y = (-tmpV.y * 0.5 + 0.5) * h;
+    if (tmpV.z > 1 || tmpV.z < -1 || x < -20 || y < -20 || x > w + 20 || y > h + 20) o.el.style.display = 'none';
+    else {
+      o.el.style.display = 'flex';
+      o.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+    }
+  }
+}
+
+function buildHotspots() {
+  const layer = document.getElementById('hotLayer');
+  HSDEF.forEach(function (d) {
+    const el = document.createElement('button');
+    el.className = 'hs';
+    el.style.setProperty('--c', d.color);
+    el.innerHTML = '<span class="dot">' + (d.id === 'L' ? 'LR' : d.id) + '</span><span class="lbl">' + d.label + '</span>';
+    el.onclick = function () { openElement(d.id, true); };
+    layer.appendChild(el);
+    HS[d.id] = { el: el, pos: null };
+  });
+}
+
+function clearGroup() {
+  while (group.children.length) {
+    const o = group.children[0];
+    group.remove(o);
+    o.traverse(function (n) {
+      if (n.geometry) n.geometry.dispose();
+      if (n.material) {
+        if (n.material.map) n.material.map.dispose();
+        n.material.dispose();
+      }
+    });
+  }
+  pulses = [];
+  for (const id in HS) HS[id].pos = null;
+}
+
+function setCenter(c) {
+  const delta = c.clone().sub(controls.target);
+  camera.position.add(delta);
+  controls.target.copy(c);
+  if (tween) {
+    tween.fp.add(delta); tween.tp.add(delta); tween.ft.add(delta); tween.tt.add(delta);
+  }
+}
+
+function paraboloidGeo(pt, R, rings, segs) {
+  const pos = [], idx = [];
+  for (let i = 0; i <= rings; i++) {
+    const r = R * i / rings;
+    for (let j = 0; j <= segs; j++) {
+      const p = pt(r, 2 * Math.PI * j / segs);
+      pos.push(p.x, p.y, p.z);
+    }
+  }
+  for (let i = 0; i < rings; i++) {
+    for (let j = 0; j < segs; j++) {
+      const a = i * (segs + 1) + j, b = a + segs + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  }
+  const g = new TH.BufferGeometry();
+  g.setAttribute('position', new TH.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function lineFrom(points, color, dashed, opacity) {
+  const g = new TH.BufferGeometry().setFromPoints(points);
+  const m = dashed
+    ? new TH.LineDashedMaterial({ color: color, dashSize: 0.32, gapSize: 0.22, transparent: true, opacity: opacity === undefined ? 1 : opacity })
+    : new TH.LineBasicMaterial({ color: color, transparent: true, opacity: opacity === undefined ? 1 : opacity });
+  const l = new TH.Line(g, m);
+  if (dashed) l.computeLineDistances();
+  return l;
+}
+
+function tubeLine(p0, p1, color, radius, opacity) {
+  const curve = new TH.LineCurve3(p0, p1);
+  const m = new TH.Mesh(
+    new TH.TubeGeometry(curve, 2, radius, 8, false),
+    new TH.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity === undefined ? 1 : opacity })
+  );
+  return m;
+}
+
+function addSphere(pos, color, radius) {
+  const m = new TH.Mesh(
+    new TH.SphereGeometry(radius, 32, 32),
+    new TH.MeshPhysicalMaterial({ color: color, roughness: 0.25, metalness: 0.2, clearcoat: 1, emissive: color, emissiveIntensity: 0.35 })
+  );
+  m.position.copy(pos);
+  m.castShadow = true;
+  group.add(m);
+  return m;
+}
+
+function addGlow(pos, color, size) {
+  const spr = new TH.Sprite(new TH.SpriteMaterial({ map: makeGlowTexture(color), transparent: true, blending: TH.AdditiveBlending, depthWrite: false, opacity: 0.85 }));
+  spr.position.copy(pos);
+  spr.scale.setScalar(size);
+  group.add(spr);
+  pulses.push({ spr: spr, base: size });
+}
+
+function applyVisibility() {
+  const is3d = S.view === '3d';
+  if (R3.surf) R3.surf.visible = S.surface && is3d;
+  if (R3.wire) R3.wire.visible = S.surface && is3d;
+  if (R3.floor) R3.floor.visible = is3d;
+  if (R3.shadow) R3.shadow.visible = is3d;
+  if (R3.gridXY) R3.gridXY.visible = !is3d;
+  if (R3.rays) R3.rays.visible = S.rays;
+  if (R3.circle) R3.circle.visible = is3d;
+  if (forestG) forestG.visible = ENV.forest && is3d;
+}
+
+function build3D() {
+  clearGroup();
+  R3 = {};
+
+  const a = isFinite(S.a) ? S.a : Math.sign(S.a) * 2000;
+  const h = effVal(S.h), k = effVal(S.k);
+  let sx = 0, sy = 0;
+  if (Math.abs(h) > 30 || Math.abs(k) > 30) { sx = h; sy = k; }
+  C.sx = sx; C.sy = sy;
+  const cx = h - sx, cy = k - sy;
+  const V = new TH.Vector3(cx, cy, 0);
+
+  keyLight.position.set(cx + 9, cy + 16, 11);
+  keyLight.target.position.set(cx, cy, 0);
+
+  if (sx === 0 && sy === 0) {
+    const axes = new TH.AxesHelper(10);
+    group.add(axes);
+  } else {
+    const axes = new TH.AxesHelper(3);
+    axes.position.copy(V);
+    group.add(axes);
+  }
+
+  const dirInf = new TH.Vector3(isFinite(S.h) ? 0 : Math.sign(S.h), isFinite(S.k) ? 0 : Math.sign(S.k), 0);
+  if (dirInf.lengthSq() > 0) {
+    dirInf.normalize();
+    const arrow = new TH.ArrowHelper(dirInf, V.clone().add(dirInf.clone().multiplyScalar(1.2)), 7, 0xfb7185, 1.4, 0.8);
+    group.add(arrow);
+  }
+
+  if (a === 0) {
+    const L = 14;
+    const p0 = S.vertical ? new TH.Vector3(cx, cy - L, 0) : new TH.Vector3(cx - L, cy, 0);
+    const p1 = S.vertical ? new TH.Vector3(cx, cy + L, 0) : new TH.Vector3(cx + L, cy, 0);
+    group.add(tubeLine(p0, p1, 0x38bdf8, 0.09));
+    addSphere(V, 0xfb923c, 0.22);
+    addGlow(V, 'rgba(251,146,60,0.9)', 2.2);
+    const grid = new TH.GridHelper(40, 40, 0x3b4a7a, 0x1c2550);
+    grid.position.set(cx, cy - 0.5, 0);
+    group.add(grid);
+    R3.floor = grid;
+    const g2 = new TH.GridHelper(60, 60, 0x3b4a7a, 0x1c2550);
+    g2.rotation.x = Math.PI / 2;
+    g2.position.set(cx, cy, -0.02);
+    group.add(g2);
+    R3.gridXY = g2;
+    HS.V.pos = V.clone();
+    C.R = 5;
+    C.dist = 24;
+    setCenter(V.clone());
+    placeForest(cx, cy - 0.5);
+    applyVisibility();
+    return;
+  }
+
+  const A = Math.abs(a), sg = Math.sign(a), vert = S.vertical;
+  const R = Math.min(6, Math.sqrt(32 * A));
+  const Hs = R * R / (4 * a);
+  C.R = R;
+
+  const ptSurf = vert
+    ? function (r, t) { return new TH.Vector3(cx + r * Math.cos(t), cy + r * r / (4 * a), r * Math.sin(t)); }
+    : function (r, t) { return new TH.Vector3(cx + r * r / (4 * a), cy + r * Math.cos(t), r * Math.sin(t)); };
+  const ptCurve = vert
+    ? function (t) { return new TH.Vector3(cx + t, cy + t * t / (4 * a), 0); }
+    : function (t) { return new TH.Vector3(cx + t * t / (4 * a), cy + t, 0); };
+
+  const surf = new TH.Mesh(
+    paraboloidGeo(ptSurf, R, 30, 64),
+    new TH.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.32, side: TH.DoubleSide, roughness: 0.18, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.15, emissive: 0x0b3b66, emissiveIntensity: 0.5, depthWrite: false })
+  );
+  group.add(surf);
+  R3.surf = surf;
+  const wire = new TH.Mesh(
+    paraboloidGeo(ptSurf, R, 10, 36),
+    new TH.MeshBasicMaterial({ color: 0x7dd3fc, wireframe: true, transparent: true, opacity: 0.26 })
+  );
+  group.add(wire);
+  R3.wire = wire;
+
+  const pts = [];
+  for (let i = 0; i <= 90; i++) pts.push(ptCurve(-R + 2 * R * i / 90));
+  const tube = new TH.Mesh(
+    new TH.TubeGeometry(new TH.CatmullRomCurve3(pts), 160, 0.075, 12, false),
+    new TH.MeshPhysicalMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.7, roughness: 0.3, clearcoat: 1 })
+  );
+  tube.castShadow = true;
+  group.add(tube);
+
+  const size = 2 * R + 4;
+  const plane = new TH.Mesh(new TH.PlaneGeometry(size, size), new TH.MeshBasicMaterial({ color: 0xfb7185, transparent: true, opacity: 0.12, side: TH.DoubleSide, depthWrite: false }));
+  const edge = new TH.LineSegments(new TH.EdgesGeometry(new TH.PlaneGeometry(size, size)), new TH.LineBasicMaterial({ color: 0xfb7185 }));
+  if (vert) {
+    plane.rotation.x = -Math.PI / 2; edge.rotation.x = -Math.PI / 2;
+    plane.position.set(cx, cy - a, 0);
+  } else {
+    plane.rotation.y = Math.PI / 2; edge.rotation.y = Math.PI / 2;
+    plane.position.set(cx - a, cy, 0);
+  }
+  edge.position.copy(plane.position);
+  group.add(plane);
+  group.add(edge);
+
+  const clampA = Math.max(-10, Math.min(10, a));
+  const floorY = vert ? Math.min(cy, cy + Hs, cy - clampA) - 0.55 : cy - R - 0.5;
+  const floor = new TH.GridHelper(48, 48, 0x3b4a7a, 0x1c2550);
+  floor.position.set(cx, floorY, 0);
+  group.add(floor);
+  R3.floor = floor;
+  const shadow = new TH.Mesh(new TH.PlaneGeometry(60, 60), new TH.ShadowMaterial({ opacity: 0.35 }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(cx, floorY + 0.01, 0);
+  shadow.receiveShadow = true;
+  group.add(shadow);
+  R3.shadow = shadow;
+  const gxy = new TH.GridHelper(60, 60, 0x3b4a7a, 0x1c2550);
+  gxy.rotation.x = Math.PI / 2;
+  gxy.position.set(cx, cy, -0.02);
+  group.add(gxy);
+  R3.gridXY = gxy;
+
+  const dir = vert ? new TH.Vector3(0, sg, 0) : new TH.Vector3(sg, 0, 0);
+  const axisLen = Math.max(Math.abs(Hs), Math.min(A, 14)) + 1.5;
+  const axisStart = V.clone().sub(dir.clone().multiplyScalar(1.5));
+  const axisEnd = V.clone().add(dir.clone().multiplyScalar(axisLen));
+  group.add(lineFrom([axisStart, axisEnd], 0x38bdf8, true, 0.9));
+
+  const focus = V.clone().add(dir.clone().multiplyScalar(A));
+  addSphere(V, 0xfb923c, 0.23);
+  addGlow(V, 'rgba(251,146,60,0.9)', 2.1);
+  addSphere(focus, 0xa78bfa, 0.21);
+  addGlow(focus, 'rgba(167,139,250,0.9)', 2.0);
+
+  const rr = 2 * A;
+  const lrA = vert ? new TH.Vector3(cx - rr, cy + a, 0) : new TH.Vector3(cx + a, cy - rr, 0);
+  const lrB = vert ? new TH.Vector3(cx + rr, cy + a, 0) : new TH.Vector3(cx + a, cy + rr, 0);
+  group.add(tubeLine(lrA, lrB, 0xfbbf24, 0.06));
+  if (rr <= R + 1e-6) {
+    const circ = [];
+    for (let i = 0; i <= 72; i++) {
+      const t = 2 * Math.PI * i / 72;
+      circ.push(vert ? new TH.Vector3(cx + rr * Math.cos(t), cy + a, rr * Math.sin(t)) : new TH.Vector3(cx + a, cy + rr * Math.cos(t), rr * Math.sin(t)));
+    }
+    const c = lineFrom(circ, 0xfbbf24, false, 0.9);
+    group.add(c);
+    R3.circle = c;
+  }
+
+  const raysG = new TH.Group();
+  const startOff = Math.abs(Hs) + 2.5;
+  [-0.82, -0.45, 0.45, 0.82].forEach(function (f) {
+    const P = ptCurve(f * R);
+    const st = vert ? new TH.Vector3(P.x, cy + sg * startOff, 0) : new TH.Vector3(cx + sg * startOff, P.y, 0);
+    raysG.add(tubeLine(st, P, 0xfde68a, 0.035, 0.9));
+    raysG.add(tubeLine(P, focus, 0xfbbf24, 0.035, 0.95));
+  });
+  group.add(raysG);
+  R3.rays = raysG;
+
+  const t = (-1 + 2 * S.probe) * R;
+  const Pp = ptCurve(t);
+  const Dp = vert ? new TH.Vector3(Pp.x, cy - a, 0) : new TH.Vector3(cx - a, Pp.y, 0);
+  group.add(tubeLine(Pp, focus, 0xa78bfa, 0.04));
+  group.add(tubeLine(Pp, Dp, 0xfb7185, 0.04));
+  addSphere(Pp, 0x34d399, 0.2);
+  addGlow(Pp, 'rgba(52,211,153,0.9)', 1.5);
+  const dm = new TH.Mesh(new TH.SphereGeometry(0.11, 16, 16), new TH.MeshBasicMaterial({ color: 0xfb7185 }));
+  dm.position.copy(Dp);
+  group.add(dm);
+
+  HS.V.pos = V.clone();
+  HS.F.pos = focus.clone();
+  HS.D.pos = vert ? new TH.Vector3(cx - R - 1, cy - a, 0) : new TH.Vector3(cx - a, cy + R + 1, 0);
+  HS.A.pos = axisEnd.clone();
+  HS.L.pos = lrB.clone();
+  HS.P.pos = Pp.clone();
+
+  const fitSize = Math.max(2 * R + 5, Math.abs(Hs) + Math.min(A, 10) + 5);
+  C.dist = fitSize * 1.55;
+  const center = vert ? new TH.Vector3(cx, cy + Hs / 2, 0) : new TH.Vector3(cx + Hs / 2, cy, 0);
+  C.center.copy(center);
+  setCenter(center);
+  placeForest(cx, floorY);
+  applyVisibility();
+}
+
+function viewDir() {
+  return S.view === '3d' ? new TH.Vector3(0.6, 0.27, 0.8).normalize() : new TH.Vector3(0, 0, 1);
+}
+
+function flyTo(pos, target, dur) {
+  tween = { t: 0, dur: dur || 0.9, fp: camera.position.clone(), tp: pos.clone(), ft: controls.target.clone(), tt: target.clone() };
+}
+
+function flyHome() {
+  if (!threeReady) return;
+  const center = C.center.clone();
+  const target = (S.a === 0) ? new TH.Vector3(S.vertical ? effVal(S.h) - C.sx : 0, 0, 0) : center;
+  const pos = target.clone().add(viewDir().multiplyScalar(C.dist));
+  flyTo(pos, target, 0.9);
+}
+
+function focusOn(p) {
+  const off = camera.position.clone().sub(controls.target);
+  flyTo(p.clone().add(off), p, 0.85);
+}
+
+function zoomBy(f) {
+  if (!threeReady) return;
+  const v = camera.position.clone().sub(controls.target);
+  const d = Math.min(600, Math.max(2, v.length() / f));
+  camera.position.copy(controls.target).add(v.setLength(d));
+  tween = null;
+}
+
+function setView(mode) {
+  S.view = mode;
+  document.getElementById('v3d').classList.toggle('on', mode === '3d');
+  document.getElementById('v2d').classList.toggle('on', mode === '2d');
+  stage.classList.toggle('is2d', mode === '2d');
+  document.getElementById('coordHud').classList.toggle('hidden', mode === '3d');
+  document.getElementById('tRotate').classList.toggle('hidden', mode === '2d');
+  document.getElementById('tSurface').classList.toggle('hidden', mode === '2d');
+  document.getElementById('hint').textContent = mode === '3d'
+    ? 'ลากเพื่อหมุน • คลิกขวา/สองนิ้วเพื่อแพน • ล้อเมาส์/ถ่างนิ้วเพื่อซูม • คลิกจุดเรืองแสงเพื่อดูคำอธิบาย'
+    : 'ลากเพื่อเลื่อนกราฟ • ล้อเมาส์/ถ่างนิ้วเพื่อซูม • เลื่อนเมาส์เพื่อสำรวจพิกัด';
+  if (!threeReady) return;
+  if (mode === '2d') {
+    controls.autoRotate = false;
+    document.getElementById('tRotate').classList.remove('on');
+    controls.enableRotate = false;
+    controls.mouseButtons = { LEFT: TH.MOUSE.PAN, MIDDLE: TH.MOUSE.DOLLY, RIGHT: TH.MOUSE.PAN };
+    controls.touches = { ONE: TH.TOUCH.PAN, TWO: TH.TOUCH.DOLLY_PAN };
+  } else {
+    controls.enableRotate = true;
+    controls.mouseButtons = { LEFT: TH.MOUSE.ROTATE, MIDDLE: TH.MOUSE.DOLLY, RIGHT: TH.MOUSE.PAN };
+    controls.touches = { ONE: TH.TOUCH.ROTATE, TWO: TH.TOUCH.DOLLY_PAN };
+  }
+  applyVisibility();
+  flyHome();
+}
+
+function toggleSurface() {
+  S.surface = !S.surface;
+  document.getElementById('tSurface').classList.toggle('on', S.surface);
+  applyVisibility();
+}
+
+function toggleRays() {
+  S.rays = !S.rays;
+  document.getElementById('tRays').classList.toggle('on', S.rays);
+  applyVisibility();
+}
+
+function toggleAutoRotate() {
+  if (!threeReady) return;
+  controls.autoRotate = !controls.autoRotate;
+  document.getElementById('tRotate').classList.toggle('on', controls.autoRotate);
+}
+
+function onPointerMove(e) {
+  if (S.view !== '2d') return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndc = new TH.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = new TH.Vector3();
+  if (!raycaster.ray.intersectPlane(planeZ, hit)) return;
+  const mx = hit.x + C.sx, my = hit.y + C.sy;
+  document.getElementById('cx').textContent = mx.toFixed(2);
+  document.getElementById('cy').textContent = my.toFixed(2);
+  let curve = '∞';
+  if (isFinite(S.a) && S.a !== 0 && isFinite(S.h) && isFinite(S.k)) {
+    const v = S.vertical ? Math.pow(mx - S.h, 2) / (4 * S.a) + S.k : Math.pow(my - S.k, 2) / (4 * S.a) + S.h;
+    curve = v.toFixed(2);
+  }
+  document.getElementById('cc').textContent = curve;
+}
+
+function switchTab(id) {
+  document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === id); });
+  document.querySelectorAll('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'pane-' + id); });
+  if (id === 'limit' && window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+}
+
+function loadQuiz() {
+  if (quizIndex >= QUIZ.length) {
+    document.getElementById('qBox').classList.add('hidden');
+    document.getElementById('qResult').classList.remove('hidden');
+    document.getElementById('qBar').style.width = '100%';
+    const pct = quizScore / QUIZ.length;
+    const msg = pct === 1 ? 'ยอดเยี่ยมมาก! เข้าใจพาราโบลาและลิมิตสู่อินฟินิตี้อย่างแม่นยำ' : pct >= 0.6 ? 'ทำได้ดี! ลองกลับไปปรับค่าในฉาก 3D เพื่อทบทวนส่วนที่พลาด' : 'ไม่เป็นไร ลองสำรวจกราฟและแท็บทฤษฎีลิมิตอีกครั้งแล้วทำซ้ำ';
+    document.getElementById('qFinal').textContent = 'คุณทำคะแนนได้ ' + quizScore + ' จาก ' + QUIZ.length + ' คะแนน — ' + msg;
+    return;
+  }
+  const q = QUIZ[quizIndex];
+  document.getElementById('qStep').textContent = 'ข้อที่ ' + (quizIndex + 1) + ' จาก ' + QUIZ.length;
+  document.getElementById('qCat').textContent = q.cat;
+  document.getElementById('qTitle').textContent = q.title;
+  document.getElementById('qScore').textContent = quizScore + ' / ' + QUIZ.length;
+  document.getElementById('qBar').style.width = (quizIndex / QUIZ.length * 100) + '%';
+  const list = document.getElementById('qOpts');
+  list.innerHTML = '';
+  q.options.forEach(function (t, i) {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    const lab = document.createElement('b');
+    lab.textContent = ['ก', 'ข', 'ค', 'ง'][i] + '.';
+    const tx = document.createElement('span');
+    tx.textContent = t;
+    b.appendChild(lab);
+    b.appendChild(tx);
+    b.onclick = function () { answerQuiz(i); };
+    list.appendChild(b);
+  });
+  document.getElementById('qExpl').classList.add('hidden');
+  document.getElementById('qNext').classList.add('hidden');
+  quizAnswered = false;
+}
+
+function answerQuiz(i) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const q = QUIZ[quizIndex];
+  const btns = document.querySelectorAll('#qOpts .opt');
+  btns.forEach(function (b) { b.disabled = true; });
+  if (i === q.correct) { quizScore++; btns[i].classList.add('good'); }
+  else { btns[i].classList.add('bad'); btns[q.correct].classList.add('good'); }
+  document.getElementById('qScore').textContent = quizScore + ' / ' + QUIZ.length;
+  const ex = document.getElementById('qExpl');
+  ex.innerHTML = '<b>💡 คำอธิบายเฉลย:</b> ';
+  ex.appendChild(document.createTextNode(q.expl));
+  ex.classList.remove('hidden');
+  const nx = document.getElementById('qNext');
+  nx.textContent = quizIndex === QUIZ.length - 1 ? 'ดูผลคะแนน →' : 'ข้อถัดไป →';
+  nx.classList.remove('hidden');
+}
+
+function nextQuiz() { quizIndex++; loadQuiz(); }
+
+function restartQuiz() {
+  quizIndex = 0;
+  quizScore = 0;
+  document.getElementById('qResult').classList.add('hidden');
+  document.getElementById('qBox').classList.remove('hidden');
+  loadQuiz();
+}
+
+const ENV = { night: false, rain: false, forest: true, amt: 0.6 };
+let amb, hemi, skyG, skyMat, cloudG, cloudMat, sunG, moonG, forestG, groundMat, pineMat, trunkMat, mountMat, rainL, rainGeo;
+let sunMats = [], moonMats = [], flash = 0, nextFlash = 0;
+const RN = 3200;
+const RX = new Float32Array(RN), RY = new Float32Array(RN), RZ = new Float32Array(RN), RV = new Float32Array(RN), rainPos = new Float32Array(RN * 6);
+const COLK = ['top', 'mid', 'bot', 'amb', 'hemiS', 'hemiG', 'key', 'ground', 'pine', 'mount', 'cloud'];
+const NUMK = ['ambI', 'hemiI', 'keyI', 'cloudO', 'stars', 'fogN', 'fogF', 'expo', 'sun', 'moon', 'rainO', 'day'];
+const PALH = {
+  day: { top: 0x1d6fd1, mid: 0x6fb4ec, bot: 0xc3dcf0, amb: 0xffffff, hemiS: 0xd2e8ff, hemiG: 0x4f7a45, key: 0xfff0d2, ground: 0x3f7d3a, pine: 0x2a7a46, mount: 0x7b9bbd, cloud: 0xffffff,
+    ambI: 0.8, hemiI: 0.7, keyI: 1.2, cloudO: 0.9, stars: 0, fogN: 80, fogF: 460, expo: 1, sun: 1, moon: 0, rainO: 0, day: 1 },
+  night: { top: 0x01030b, mid: 0x0a1838, bot: 0x101c42, amb: 0x9db4ff, hemiS: 0xbfdcff, hemiG: 0x1a1040, key: 0xb8c8ff, ground: 0x12301f, pine: 0x1b5a3c, mount: 0x16224d, cloud: 0x5a6a9a,
+    ambI: 0.55, hemiI: 0.45, keyI: 0.75, cloudO: 0.3, stars: 0.85, fogN: 70, fogF: 420, expo: 1.15, sun: 0, moon: 1, rainO: 0, day: 0 },
+  dayRain: { top: 0x4d5865, mid: 0x78848f, bot: 0x7d8892, amb: 0xdfe8f2, hemiS: 0xb8c4cf, hemiG: 0x35553a, key: 0xe6edf5, ground: 0x2d5a30, pine: 0x1f5e38, mount: 0x59656f, cloud: 0x5c6670,
+    ambI: 0.6, hemiI: 0.55, keyI: 0.45, cloudO: 1, stars: 0, fogN: 20, fogF: 210, expo: 0.95, sun: 0.12, moon: 0, rainO: 0.55, day: 0.55 },
+  nightRain: { top: 0x02040a, mid: 0x0b1220, bot: 0x0a101c, amb: 0x7f93c8, hemiS: 0x9db4e0, hemiG: 0x101a2a, key: 0x93a4d8, ground: 0x0c1d15, pine: 0x123d2c, mount: 0x0e1630, cloud: 0x1a2236,
+    ambI: 0.4, hemiI: 0.35, keyI: 0.35, cloudO: 1, stars: 0, fogN: 20, fogF: 200, expo: 1.1, sun: 0, moon: 0.25, rainO: 0.6, day: 0 }
+};
+const PALC = {}, CUR = {};
+const WIRE_DAY = { c: null };
+
+function envKey() { return (ENV.night ? 'night' : 'day') + (ENV.rain ? 'Rain' : ''); }
+
+function rng(seed) {
+  let a = seed;
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function cloudTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const x = c.getContext('2d');
+  for (let i = 0; i < 9; i++) {
+    const px = 40 + Math.random() * 176, py = 52 + Math.random() * 26, r = 30 + Math.random() * 32;
+    const g = x.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.55)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 256, 128);
+  }
+  return new TH.CanvasTexture(c);
+}
+
+function moonTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+  g.addColorStop(0, 'rgba(200,215,255,0.55)');
+  g.addColorStop(0.38, 'rgba(180,200,255,0.2)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 256, 256);
+  x.beginPath();
+  x.arc(128, 128, 46, 0, Math.PI * 2);
+  x.fillStyle = '#eef2ff';
+  x.fill();
+  [[110, 112, 10], [146, 130, 13], [124, 150, 7], [150, 102, 6]].forEach(function (d) {
+    x.beginPath();
+    x.arc(d[0], d[1], d[2], 0, Math.PI * 2);
+    x.fillStyle = 'rgba(150,160,195,0.55)';
+    x.fill();
+  });
+  return new TH.CanvasTexture(c);
+}
+
+function grassTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#d8d8d8';
+  x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2200; i++) {
+    const v = 150 + Math.floor(Math.random() * 105);
+    x.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',0.55)';
+    x.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1 + Math.random() * 3);
+  }
+  const t = new TH.CanvasTexture(c);
+  t.wrapS = t.wrapT = TH.RepeatWrapping;
+  t.repeat.set(70, 70);
+  t.anisotropy = 4;
+  return t;
+}
+
+function buildForest() {
+  forestG = new TH.Group();
+  scene.add(forestG);
+  groundMat = new TH.MeshStandardMaterial({ color: 0x3f7d3a, roughness: 0.95, metalness: 0, map: grassTexture() });
+  const ground = new TH.Mesh(new TH.CircleGeometry(420, 72), groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.08;
+  forestG.add(ground);
+
+  pineMat = new TH.MeshStandardMaterial({ color: 0x2a7a46, roughness: 0.9, flatShading: true });
+  trunkMat = new TH.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 });
+  mountMat = new TH.MeshStandardMaterial({ color: 0x7b9bbd, roughness: 1, flatShading: true });
+
+  const geos = [
+    new TH.CylinderGeometry(0.2, 0.28, 1.8, 6).translate(0, 0.9, 0),
+    new TH.ConeGeometry(1.7, 3.0, 8).translate(0, 2.9, 0),
+    new TH.ConeGeometry(1.35, 2.7, 8).translate(0, 4.3, 0),
+    new TH.ConeGeometry(0.95, 2.5, 8).translate(0, 5.6, 0)
+  ];
+  const mats = [trunkMat, pineMat, pineMat, pineMat];
+  const N = 360;
+  const ims = geos.map(function (g, i) { return new TH.InstancedMesh(g, mats[i], N); });
+  const rnd = rng(11);
+  const m4 = new TH.Matrix4(), q = new TH.Quaternion(), pos = new TH.Vector3(), sc = new TH.Vector3(), up = new TH.Vector3(0, 1, 0), col = new TH.Color();
+  for (let i = 0; i < N; i++) {
+    const r = Math.sqrt(rnd() * (95 * 95 - 26 * 26) + 26 * 26), th = rnd() * Math.PI * 2, sz = 0.7 + rnd() * 0.8;
+    pos.set(Math.cos(th) * r, 0, Math.sin(th) * r);
+    q.setFromAxisAngle(up, rnd() * 6.283);
+    sc.set(sz * (0.85 + rnd() * 0.3), sz, sz * (0.85 + rnd() * 0.3));
+    m4.compose(pos, q, sc);
+    const v = 0.72 + rnd() * 0.5;
+    col.setRGB(v * 0.9, v, v * 0.9);
+    ims.forEach(function (m) { m.setMatrixAt(i, m4); m.setColorAt(i, col); });
+  }
+  ims.forEach(function (m) {
+    m.instanceMatrix.needsUpdate = true;
+    m.instanceColor.needsUpdate = true;
+    m.frustumCulled = false;
+    forestG.add(m);
+  });
+
+  const mg = new TH.ConeGeometry(1, 1, 5);
+  for (let i = 0; i < 20; i++) {
+    const a = i / 20 * 6.283 + rnd() * 0.25, r = 240 + rnd() * 70, h = 60 + rnd() * 70, w = 55 + rnd() * 40;
+    const m = new TH.Mesh(mg, mountMat);
+    m.scale.set(w, h, w);
+    m.position.set(Math.cos(a) * r, h / 2 - 3, Math.sin(a) * r);
+    m.rotation.y = rnd() * 6;
+    forestG.add(m);
+  }
+}
+
+function placeForest(x, y) {
+  if (forestG) forestG.position.set(x, y, 0);
+}
+
+function buildRain() {
+  for (let i = 0; i < RN; i++) {
+    RX[i] = (Math.random() - 0.5) * 90;
+    RY[i] = (Math.random() - 0.5) * 48;
+    RZ[i] = (Math.random() - 0.5) * 90;
+    RV[i] = 22 + Math.random() * 14;
+  }
+  rainGeo = new TH.BufferGeometry();
+  rainGeo.setAttribute('position', new TH.BufferAttribute(rainPos, 3));
+  rainL = new TH.LineSegments(rainGeo, new TH.LineBasicMaterial({ color: 0xaec7e8, transparent: true, opacity: 0, depthWrite: false }));
+  rainL.frustumCulled = false;
+  rainL.visible = false;
+  scene.add(rainL);
+}
+
+function buildEnv() {
+  for (const n in PALH) {
+    PALC[n] = {};
+    for (const k in PALH[n]) PALC[n][k] = COLK.indexOf(k) >= 0 ? new TH.Color(PALH[n][k]) : PALH[n][k];
+  }
+  WIRE_DAY.c = new TH.Color(0x0b5d9a);
+  const T = PALC[envKey()];
+  COLK.forEach(function (k) { CUR[k] = T[k].clone(); });
+  NUMK.forEach(function (k) { CUR[k] = T[k]; });
+
+  skyG = new TH.Group();
+  scene.add(skyG);
+  skyMat = new TH.ShaderMaterial({
+    side: TH.BackSide,
+    depthWrite: false,
+    uniforms: { uTop: { value: new TH.Color() }, uMid: { value: new TH.Color() }, uBot: { value: new TH.Color() }, uFlash: { value: 0 } },
+    vertexShader: 'varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 uTop; uniform vec3 uMid; uniform vec3 uBot; uniform float uFlash; varying vec3 vP; void main() { float h = normalize(vP).y; vec3 c = h < 0.0 ? uBot : (h < 0.3 ? mix(uBot, uMid, h / 0.3) : mix(uMid, uTop, pow((h - 0.3) / 0.7, 0.8))); c += vec3(0.55, 0.6, 0.8) * uFlash * 0.55; gl_FragColor = vec4(c, 1.0); }'
+  });
+  const dome = new TH.Mesh(new TH.SphereGeometry(1200, 32, 16), skyMat);
+  dome.renderOrder = -20;
+  dome.frustumCulled = false;
+  skyG.add(dome);
+
+  cloudG = new TH.Group();
+  skyG.add(cloudG);
+  cloudMat = new TH.SpriteMaterial({ map: cloudTexture(), transparent: true, depthWrite: false, fog: false, opacity: 0.8 });
+  const cr = rng(5);
+  for (let i = 0; i < 16; i++) {
+    const a = cr() * 6.283, r = 500 + cr() * 400, y = 160 + cr() * 160;
+    const sp = new TH.Sprite(cloudMat);
+    sp.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    sp.scale.set(380 + cr() * 240, 140 + cr() * 80, 1);
+    sp.renderOrder = -10;
+    cloudG.add(sp);
+  }
+
+  sunG = new TH.Group();
+  const sg = new TH.SpriteMaterial({ map: makeGlowTexture('rgba(255,225,150,1)'), transparent: true, depthWrite: false, fog: false, blending: TH.AdditiveBlending });
+  const sc2 = new TH.SpriteMaterial({ map: makeGlowTexture('rgba(255,252,235,1)'), transparent: true, depthWrite: false, fog: false });
+  const sa = new TH.Sprite(sg), sb = new TH.Sprite(sc2);
+  sa.scale.setScalar(520); sb.scale.setScalar(150);
+  sunG.add(sa); sunG.add(sb);
+  sunG.position.set(-0.45, 0.17, -0.8).normalize().multiplyScalar(950);
+  sunMats = [sg, sc2];
+  skyG.add(sunG);
+
+  moonG = new TH.Group();
+  const mm = new TH.SpriteMaterial({ map: moonTexture(), transparent: true, depthWrite: false, fog: false });
+  const ms = new TH.Sprite(mm);
+  ms.scale.setScalar(420);
+  moonG.add(ms);
+  moonG.position.set(-0.5, 0.22, -0.78).normalize().multiplyScalar(950);
+  moonMats = [mm];
+  skyG.add(moonG);
+
+  buildForest();
+  buildRain();
+  document.body.classList.toggle('day', !ENV.night);
+  updateEnv(100, 0);
+  applyVisibility();
+}
+
+function stepRain(dt) {
+  rainL.visible = CUR.rainO > 0.01;
+  if (!rainL.visible) return;
+  rainL.material.opacity = CUR.rainO;
+  const t = controls.target, n = Math.floor(RN * ENV.amt), p = rainPos;
+  dt = Math.min(dt, 0.05);
+  for (let i = 0; i < n; i++) {
+    let x = RX[i] + 2.2 * dt, y = RY[i] - RV[i] * dt, z = RZ[i];
+    x = t.x + ((x - t.x + 45) % 90 + 90) % 90 - 45;
+    y = t.y + ((y - t.y + 24) % 48 + 48) % 48 - 24;
+    z = t.z + ((z - t.z + 45) % 90 + 90) % 90 - 45;
+    RX[i] = x; RY[i] = y; RZ[i] = z;
+    const L = 0.8 + RV[i] * 0.025, j = i * 6;
+    p[j] = x; p[j + 1] = y; p[j + 2] = z;
+    p[j + 3] = x - 0.09 * L; p[j + 4] = y + L; p[j + 5] = z;
+  }
+  rainGeo.setDrawRange(0, n * 2);
+  rainGeo.attributes.position.needsUpdate = true;
+}
+
+function updateEnv(dt, now) {
+  const T = PALC[envKey()];
+  const f = 1 - Math.exp(-dt * 2.4);
+  COLK.forEach(function (k) { CUR[k].lerp(T[k], f); });
+  NUMK.forEach(function (k) { CUR[k] += (T[k] - CUR[k]) * f; });
+
+  if (ENV.rain && now > nextFlash) {
+    flash = 1;
+    nextFlash = now + 4000 + Math.random() * 9000;
+  }
+  flash = ENV.rain ? flash * Math.exp(-dt * 7) : 0;
+
+  scene.fog.color.copy(CUR.bot);
+  scene.fog.near = CUR.fogN;
+  scene.fog.far = CUR.fogF;
+  skyMat.uniforms.uTop.value.copy(CUR.top);
+  skyMat.uniforms.uMid.value.copy(CUR.mid);
+  skyMat.uniforms.uBot.value.copy(CUR.bot);
+  skyMat.uniforms.uFlash.value = flash;
+  amb.color.copy(CUR.amb);
+  amb.intensity = CUR.ambI + flash * 0.9;
+  hemi.color.copy(CUR.hemiS);
+  hemi.groundColor.copy(CUR.hemiG);
+  hemi.intensity = CUR.hemiI + flash * 1.2;
+  keyLight.color.copy(CUR.key);
+  keyLight.intensity = CUR.keyI + flash;
+  renderer.toneMappingExposure = CUR.expo;
+  groundMat.color.copy(CUR.ground);
+  pineMat.color.copy(CUR.pine);
+  mountMat.color.copy(CUR.mount);
+  cloudMat.color.copy(CUR.cloud);
+  cloudMat.opacity = CUR.cloudO * 0.85;
+  sunMats[0].opacity = CUR.sun * 0.9;
+  sunMats[1].opacity = CUR.sun;
+  moonMats[0].opacity = CUR.moon;
+  sunG.visible = CUR.sun > 0.01;
+  moonG.visible = CUR.moon > 0.01;
+  stars.material.opacity = CUR.stars * 0.8;
+  stars.visible = CUR.stars > 0.02;
+  skyG.position.copy(camera.position);
+  stars.position.copy(camera.position);
+  cloudG.rotation.y += dt * 0.004;
+  if (R3.wire) R3.wire.material.color.setHex(0x7dd3fc).lerp(WIRE_DAY.c, CUR.day);
+  stepRain(dt);
+}
+
+function setEnv(k, v) {
+  ENV[k] = v;
+  if (k === 'night') document.body.classList.toggle('day', !v);
+  updateEnvUI();
+  if (threeReady) applyVisibility();
+}
+
+function updateEnvUI() {
+  const m = { eDay: !ENV.night, eNight: ENV.night, eClear: !ENV.rain, eRain: ENV.rain, eOn: ENV.forest, eOff: !ENV.forest, tNight: ENV.night, tRain: ENV.rain, tForest: ENV.forest };
+  for (const id in m) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('on', m[id]);
+  }
+}
+
+window.addEventListener('load', function () {
+  buildParamUI();
+  buildPresetUI();
+  buildElemGrid();
+  buildHotspots();
+  document.querySelectorAll('#tabs button').forEach(function (b) { b.onclick = function () { switchTab(b.dataset.tab); }; });
+  document.getElementById('probe').addEventListener('input', function (e) {
+    S.probe = parseFloat(e.target.value);
+    if (threeReady) build3D();
+    updateProbeText();
+    refreshCardValue();
+  });
+  init3D();
+  syncInputs();
+  refresh();
+  loadQuiz();
+  updateEnvUI();
+  if (threeReady) {
+    const p = C.center.clone();
+    camera.position.copy(p).add(viewDir().multiplyScalar(C.dist));
+    controls.target.copy(p);
+    controls.update();
+    setTimeout(function () { showCard('V'); }, 700);
+  }
+});
+</script>
+</body>
+</html>
